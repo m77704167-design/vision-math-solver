@@ -1,0 +1,19 @@
+DROP FUNCTION IF EXISTS public.has_active_subscription(UUID);
+
+CREATE OR REPLACE FUNCTION public.has_active_subscription()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.subscriptions
+    WHERE user_id = auth.uid()
+      AND status IN ('active', 'trialing')
+      AND (current_period_end IS NULL OR current_period_end > now())
+  );
+$$;
+
+REVOKE ALL ON FUNCTION public.has_active_subscription() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.has_active_subscription() TO authenticated;
